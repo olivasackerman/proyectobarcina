@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>whoisolivasx - CORE OS</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;800&family=Inter:wght@300;400;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #050505;
+            --container-bg: rgba(10, 10, 10, 0.9);
+            --text-main: #ffffff;
+            --text-dim: #888888;
+            --accent: #ff0000;
+            --neon-bright: #ffb3b3; /* Núcleo del neón más brillante */
+            --accent-glow: rgba(255, 0, 0, 0.7);
+            --border: #222222;
+            --sidebar-space: 140px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: var(--bg-color); 
+            padding: 40px 40px 40px var(--sidebar-space); 
+            color: var(--text-main); 
+            overflow: hidden; 
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* FONDO DE REJILLA */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-image: 
+                linear-gradient(var(--border) 1px, transparent 1px),
+                linear-gradient(90deg, var(--border) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: 1; 
+            opacity: 0.15;
+            animation: moveGrid 20s linear infinite;
+        }
+
+        @keyframes moveGrid {
+            from { background-position: 0 0; }
+            to { background-position: 50px 50px; }
+        }
+
+        /* LÍNEA DE ESCANEO NEÓN DINÁMICA */
+        .scanline {
+            position: fixed;
+            top: 0; /* Punto de anclaje inicial */
+            left: 0;
+            width: 100%;
+            height: 4px; 
+            background: var(--neon-bright);
+            /* Efecto Neón multicapa */
+            box-shadow: 
+                0 0 10px #ff7474,
+                0 0 20px var(--accent),
+                0 0 40px var(--accent),
+                0 0 80px var(--accent);
+            z-index: 2; /* PASA POR DETRÁS DEL CONTENEDOR */
+            pointer-events: none;
+            opacity: 0.8;
+            /* Animación fluida de 4 segundos sin esperas */
+            animation: scanFull 8s linear infinite;
+        }
+
+        /* Animación que va desde -20% de la altura hasta el 120% para asegurar el recorrido total */
+        @keyframes scanFull {
+            0% { transform: translateY(-20vh); }
+            100% { transform: translateY(120vh); }
+        }
+
+        .container { 
+            width: 100%;
+            max-width: 1200px; 
+            background: var(--container-bg); 
+            padding: 80px 60px; 
+            border-radius: 4px; 
+            border: 1px solid var(--border);
+            position: relative;
+            /* Efecto de cristal para que el neón se vea difuso al pasar por detrás */
+            backdrop-filter: blur(15px); 
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+            z-index: 10; /* ESTÁ POR ENCIMA DE LA LÍNEA ROJA */
+        }
+
+        /* ESQUINAS TECNOLÓGICAS */
+        .container::after {
+            content: "";
+            position: absolute;
+            top: -2px; right: -2px; width: 40px; height: 40px;
+            border-top: 3px solid var(--accent);
+            border-right: 3px solid var(--accent);
+        }
+
+        .container::before {
+            content: "";
+            position: absolute;
+            bottom: -2px; left: -2px; width: 40px; height: 40px;
+            border-bottom: 3px solid var(--accent);
+            border-left: 3px solid var(--accent);
+        }
+
+        .hero-title { 
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-main); 
+            font-size: clamp(1.5rem, 4vw, 2.5rem); 
+            font-weight: 800; 
+            margin-bottom: 20px;
+            text-align: left;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+        }
+
+        .hero-title span { color: var(--accent); text-shadow: 0 0 10px var(--accent-glow); }
+
+        .welcome-msg {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 1.1rem;
+            color: var(--text-dim);
+            text-align: left;
+            max-width: 800px;
+            min-height: 120px;
+            margin-bottom: 40px;
+            line-height: 1.8;
+            border-left: 3px solid var(--accent);
+            padding-left: 25px;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .feature-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            padding: 30px;
+            transition: 0.4s ease;
+        }
+
+        .feature-card:hover {
+            background: rgba(255, 0, 0, 0.07);
+            border-color: var(--accent);
+            transform: translateY(-5px);
+        }
+
+        .feature-card h3 {
+            color: var(--accent);
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            font-weight: 800;
+        }
+
+        .feature-card p {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            line-height: 1.6;
+        }
+
+        .system-status {
+            position: absolute;
+            top: 25px;
+            right: 30px;
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            color: var(--accent);
+            letter-spacing: 1px;
+        }
+
+        footer {
+            margin-top: 60px;
+            font-size: 0.7rem;
+            color: #444;
+            letter-spacing: 3px;
+            text-align: left;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 10px;
+            height: 1.1rem;
+            background: var(--accent);
+            margin-left: 5px;
+            animation: blink 1s infinite;
+            vertical-align: middle;
+            box-shadow: 0 0 10px var(--accent);
+        }
+
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    </style>
+</head>
+<body>
+
+    <div class="scanline"></div>
+
+    <div class="container">
+        <div class="system-status">
+            SYSTEM: ONLINE<br>
+            ENCRYPTION: AES-256<br>
+            CORE: BARCINA_V3.0
+        </div>
+
+        <h1 class="hero-title" id="title">PROYECTO <span>BARCINA</span></h1>
+        
+        <div class="welcome-msg">
+            <span id="typewriter"></span><span class="cursor"></span>
+        </div>
+
+        <div class="features-grid">
+            <div class="feature-card">
+                <h3>[01. DATA_MINING]</h3>
+                <p>Procesamiento de métricas crudas (.xlsx). Identificación de patrones de retención absoluta.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3>[02. NEURAL_LINK]</h3>
+                <p>Enlace directo con Gemini. Traducción de datos estadísticos a planes de acción para guiones.</p>
+            </div>
+
+            <div class="feature-card">
+                <h3>[03. SEO_ENGINE]</h3>
+                <p>Optimización algorítmica de metadatos para la expansión de whoisolivasx.</p>
+            </div>
+        </div>
+
+        <footer>
+            ESTABLISHED // 2026 // OPERATED BY OLIVAS CORPORATION
+        </footer>
+    </div>
+
+    <script src="menufijo.js"></script>
+
+    <script>
+        const text = "Bienvenido de nuevo, Olivas. El núcleo operativo está activo y listo para procesar tus datos. Estoy preparada para analizar la retención de tus videoensayos y ejecutar la optimización SEO. ¿Qué protocolo inicializaremos hoy?";
+        let i = 0;
+        const speed = 30;
+
+        function typeWriter() {
+            if (i < text.length) {
+                document.getElementById("typewriter").innerHTML += text.charAt(i);
+                i++;
+                setTimeout(typeWriter, speed);
+            }
+        }
+
+        window.onload = typeWriter;
+    </script>
+</body>
+</html>

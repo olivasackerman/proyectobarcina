@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>whoisolivasx - Crecimiento y Tendencias</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f0f0f;
+            --container-bg: #1e1e1e;
+            --text-main: #ffffff;
+            --text-dim: #aaaaaa;
+            --accent: #ff0000;
+            --border: #3f3f3f;
+            --sidebar-space: 140px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { 
+            font-family: 'Inter', 'Segoe UI', sans-serif; 
+            background: var(--bg-color); 
+            width: 100vw; min-height: 100vh;
+            padding: 20px 20px 20px var(--sidebar-space); 
+            color: var(--text-main); 
+            overflow-x: hidden;
+        }
+
+        .container { 
+            width: calc(100% - 10px);
+            max-width: 1800px; 
+            background: var(--container-bg); 
+            padding: 30px; border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5); 
+            margin: 0 auto;
+        }
+
+        h1 { color: var(--accent); text-align: center; margin-bottom: 5px; font-weight: 800; text-transform: uppercase; }
+        .subtitle { text-align: center; color: var(--text-dim); margin-bottom: 30px; font-size: 0.95em; }
+
+        .controls { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 30px; }
+        
+        .upload-section { 
+            border: 2px dashed var(--border); padding: 20px; text-align: center; 
+            border-radius: 12px; cursor: pointer; background: #2a2a2a; color: var(--text-dim); transition: 0.3s;
+        }
+        .upload-section:hover { border-color: var(--accent); color: white; }
+
+        .copy-btn {
+            background: var(--accent); color: white; border: none; border-radius: 12px;
+            font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.9rem;
+        }
+        .copy-btn:hover { background: #cc0000; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255,0,0,0.3); }
+
+        /* Estilo de Pestañas */
+        #tabsContainer { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; }
+        .tab-button { 
+            padding: 10px 20px; border: 1px solid var(--border); background: #2a2a2a; 
+            color: var(--text-dim); cursor: pointer; border-radius: 25px; font-size: 0.85em; font-weight: 600; transition: 0.3s;
+        }
+        .tab-button.active { background: var(--accent); color: white; border-color: var(--accent); }
+        .tab-button:hover:not(.active) { background: #333; color: white; }
+
+        .chart-container { 
+            background: #2a2a2a; padding: 20px; border-radius: 15px; 
+            margin-bottom: 30px; border: 1px solid var(--border); height: 450px;
+        }
+
+        .table-wrapper { 
+            overflow-x: auto; max-height: 400px; border: 1px solid var(--border); 
+            border-radius: 12px; background: #2a2a2a;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { background: #333; position: sticky; top: 0; padding: 12px; text-align: left; color: var(--accent); z-index: 10; }
+        td { padding: 10px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+        tr:hover td { background: #353535; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Análisis de Crecimiento</h1>
+    <p class="subtitle">Evolución Temporal: Suscriptores, Audiencia y Comunidad | whoisolivasx</p>
+
+    <div class="controls">
+        <div class="upload-section" id="dropZone">
+            <span>📁 Cargar Reporte de Crecimiento (.xlsx)</span>
+            <input type="file" id="fileInput" accept=".xlsx" style="display: none;">
+        </div>
+        <button class="copy-btn" id="copyAiBtn" style="display:none;" onclick="copyForAI()">🚀 EXTRAER DATOS PARA IA</button>
+    </div>
+
+    <div id="tabsContainer"></div>
+
+    <div class="chart-container" id="chartWrapper" style="display:none;">
+        <canvas id="growthChart"></canvas>
+    </div>
+
+    <div id="tableArea" class="table-wrapper">
+        <div style="text-align:center; padding:100px; color:var(--text-dim);">Esperando datos de YouTube Studio...</div>
+    </div>
+</div>
+
+<script src="menufijo.js"></script>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    const tabsContainer = document.getElementById('tabsContainer');
+    let workbookData = {};
+    let myChart = null;
+    let currentSheet = "";
+
+    // Paleta de colores para múltiples líneas (Rojo, Azul, Amarillo, Verde)
+    const colorPalette = ['#ff0000', '#87CEEB', '#FFD700', '#32CD32', '#FF69B4'];
+
+    dropZone.onclick = () => fileInput.click();
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ff0000';
+        dropZone.style.background = '#3a1a1a';
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.background = 'var(--card-bg)';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.background = 'var(--card-bg)';
+        
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.xlsx')) {
+            processExcel(file);
+        } else {
+            alert('Por favor, arrastra un archivo .xlsx válido.');
+        }
+    });
+
+    function processExcel(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            // raw: false asegura que las fechas de Excel se lean como texto formateado ("YYYY-MM-DD")
+            const workbook = XLSX.read(data, { type: 'array', raw: false });
+            
+            workbookData = {};
+            tabsContainer.innerHTML = '';
+            
+            workbook.SheetNames.forEach((name, index) => {
+                // Filtramos hojas vacías
+                const sheetData = XLSX.utils.sheet_to_json(workbook.Sheets[name], { header: 1 });
+                if (sheetData.length > 1) {
+                    // Limpiar el nombre de la hoja (quitar " (Tabla)") para que se vea más limpio
+                    const cleanName = name.replace(" (Tabla)", "");
+                    workbookData[cleanName] = sheetData;
+                    
+                    const btn = document.createElement('button');
+                    btn.className = 'tab-button' + (index === 0 ? ' active' : '');
+                    btn.innerText = cleanName;
+                    btn.onclick = () => switchSheet(cleanName, btn);
+                    tabsContainer.appendChild(btn);
+                }
+            });
+
+            const firstValidSheet = Object.keys(workbookData)[0];
+            if (firstValidSheet) {
+                switchSheet(firstValidSheet, tabsContainer.firstChild);
+                document.getElementById('copyAiBtn').style.display = 'block';
+                document.getElementById('chartWrapper').style.display = 'block';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function switchSheet(name, clickedBtn) {
+        currentSheet = name;
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        clickedBtn.classList.add('active');
+        
+        const data = workbookData[name];
+        renderTable(data);
+        renderChart(data, name);
+    }
+
+    function renderTable(data) {
+        if (!data || data.length === 0) return;
+        let html = '<table><thead><tr>';
+        data[0].forEach(h => html += `<th>${h || ''}</th>`);
+        html += '</tr></thead><tbody>';
+        
+        // Iterar desde la fila 1 para saltar encabezados
+        for (let i = 1; i < data.length; i++) {
+            // Evitar filas totalmente vacías
+            if(data[i].length > 0 && data[i][0]) {
+                html += '<tr>';
+                data[i].forEach((cell, index) => {
+                    // Resaltar la fecha (columna 0)
+                    if(index === 0) html += `<td style="color: #fff; font-weight: 500;">${cell}</td>`;
+                    else html += `<td>${cell !== undefined ? cell : '0'}</td>`;
+                });
+                html += '</tr>';
+            }
+        }
+        document.getElementById('tableArea').innerHTML = html + '</tbody></table>';
+    }
+
+    function renderChart(data, sheetName) {
+        const ctx = document.getElementById('growthChart').getContext('2d');
+        if (myChart) myChart.destroy();
+
+        // Extraer encabezados y etiquetas (Fechas)
+        const headers = data[0];
+        // Filtrar filas vacías para las etiquetas
+        const validRows = data.slice(1).filter(r => r.length > 0 && r[0]);
+        const labels = validRows.map(r => r[0]);
+
+        // Crear dinámicamente un dataset por cada columna de datos (después de la fecha)
+        const datasets = [];
+        for (let i = 1; i < headers.length; i++) {
+            if (!headers[i]) continue; // Saltar columnas sin nombre
+            
+            const columnData = validRows.map(row => {
+                // Limpiar comas o caracteres para parsear números correctamente
+                let val = row[i];
+                if (typeof val === 'string') val = val.replace(/,/g, '');
+                return parseFloat(val) || 0;
+            });
+
+            datasets.push({
+                label: headers[i],
+                data: columnData,
+                borderColor: colorPalette[(i - 1) % colorPalette.length],
+                backgroundColor: 'transparent',
+                borderWidth: 3,
+                tension: 0.4, // Suavizar la línea de tiempo
+                pointRadius: 2,
+                pointHoverRadius: 6
+            });
+        }
+
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { 
+                    legend: { labels: { color: '#fff', font: { size: 12 } }, position: 'top' },
+                    tooltip: {
+                        backgroundColor: 'rgba(20,20,20,0.9)',
+                        titleColor: '#fff',
+                        bodyColor: '#aaa',
+                        borderColor: '#ff0000',
+                        borderWidth: 1
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: '#aaa', maxTicksLimit: 15 }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#aaa' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    function copyForAI() {
+        if (Object.keys(workbookData).length === 0) {
+            alert("Por favor, sube un archivo primero.");
+            return;
+        }
+
+        let promptText = `Actúa como un Analista de Crecimiento en YouTube (Growth Hacker) y Estratega de Comunidades.
+            Analiza las siguientes métricas temporales de mi canal "whoisolivasx". Mi contenido se enfoca en videoensayos profundos y reflexivos. 
+
+            Los datos adjuntos muestran la evolución de mi canal día a día e incluyen varias hojas: Audiencia mensual, Usuarios (Nuevos, Ocasionales y Habituales) y Suscriptores.
+
+            TU OBJETIVO Y ENTREGABLES:
+            1. Análisis de Tendencia y Momentum: Revisa las fechas proporcionadas. ¿El crecimiento es constante, hay estancamiento o identificas picos acelerados? Basado en tu experiencia con canales de videoensayos, ¿qué suele provocar estos picos?
+            2. Salud de la Comunidad (Nuevos vs Habituales): Analiza la proporción entre "Usuarios nuevos" y "Usuarios habituales". ¿Qué porcentaje aproximado de la audiencia nueva se está quedando como espectador leal? Si la brecha de "ocasionales" es muy grande, dame 2 tácticas narrativas para convertirlos en fans recurrentes.
+            3. Ratio de Conversión de Suscriptores: Cruza el crecimiento de la Audiencia Total con el crecimiento diario de Suscriptores. ¿Mi canal requiere de muchísimas vistas para ganar un solo suscriptor o la conversión es sana? ¿Cómo puedo integrar el "Call to Action" (Llamado a la acción) en mis guiones para que se sienta maduro, estoico y efectivo sin parecer desesperado?
+            4. Diagnóstico de Fase: Basado en estas tendencias, ¿en qué fase de crecimiento estoy? ¿Debería enfocar mis próximos videos en el "Descubrimiento" (atraer más gente nueva con temas amplios) o en la "Lealtad" (hacer videos de nicho para fidelizar a los habituales)?
+
+            Responde de forma ejecutiva, directa, usando viñetas y dirigiéndote a mí como mi consultor estratégico personal.
+
+            AQUÍ ESTÁN LOS DATOS HISTÓRICOS DE CRECIMIENTO:
+            `;
+
+        let fullText = promptText;
+        
+        // Extraemos los datos de TODAS las hojas para que la IA tenga contexto completo
+        for (let sheetName in workbookData) {
+            fullText += `\n\n--- [HOJA: ${sheetName}] ---\n`;
+            workbookData[sheetName].forEach(row => {
+                // Filtramos filas vacías
+                if(row.length > 0 && row[0]) {
+                    fullText += row.join("\t") + "\n";
+                }
+            });
+        }
+
+        navigator.clipboard.writeText(fullText).then(() => {
+            alert("🚀 ¡PROMPT DE CRECIMIENTO COPIADO! Pégalo en Gemini para descubrir tu nivel de retención de comunidad.");
+        });
+    }
+</script>
+
+</body>
+</html>

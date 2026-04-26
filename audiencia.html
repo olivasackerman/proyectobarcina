@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>whoisolivasx - Análisis de Audiencia</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0f0f0f;
+            --container-bg: #1e1e1e;
+            --text-main: #ffffff;
+            --text-dim: #aaaaaa;
+            --accent: #ff0000;
+            --border: #3f3f3f;
+            --sidebar-space: 140px;
+            --male-color: #87CEEB; /* Azul Cielo */
+            --female-color: #FFB6C1; /* Rosa Claro */
+            --other-color: #555555; /* Gris para No especificado */
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body { 
+            font-family: 'Inter', 'Segoe UI', sans-serif; 
+            background: var(--bg-color); 
+            width: 100vw; min-height: 100vh;
+            padding: 20px 20px 20px var(--sidebar-space); 
+            color: var(--text-main); 
+            overflow-x: hidden;
+        }
+
+        .container { 
+            width: calc(100% - 10px);
+            max-width: 1800px; 
+            background: var(--container-bg); 
+            padding: 30px; border-radius: 20px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5); 
+            margin: 0 auto;
+        }
+
+        h1 { color: var(--accent); text-align: center; margin-bottom: 5px; font-weight: 800; text-transform: uppercase; }
+        .subtitle { text-align: center; color: var(--text-dim); margin-bottom: 30px; font-size: 0.95em; }
+
+        .controls { 
+            display: grid; 
+            grid-template-columns: 2fr 1fr; 
+            gap: 15px; 
+            margin-bottom: 30px; 
+        }
+        
+        .upload-section { 
+            border: 2px dashed var(--border); padding: 20px; text-align: center; 
+            border-radius: 12px; cursor: pointer; background: #2a2a2a; color: var(--text-dim);
+        }
+
+        .copy-btn {
+            background: var(--accent); color: white; border: none; border-radius: 12px;
+            font-weight: bold; cursor: pointer; transition: 0.3s; font-size: 0.9rem;
+        }
+        .copy-btn:hover { background: #cc0000; transform: translateY(-2px); }
+
+        .chart-container { 
+            background: #2a2a2a; padding: 20px; border-radius: 15px; 
+            margin-bottom: 30px; border: 1px solid var(--border); height: 500px;
+        }
+
+        .table-wrapper { 
+            overflow-x: auto; max-height: 400px; border: 1px solid var(--border); 
+            border-radius: 12px; background: #2a2a2a;
+        }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { background: #333; position: sticky; top: 0; padding: 12px; text-align: left; color: var(--accent); }
+        td { padding: 10px; border-bottom: 1px solid var(--border); color: var(--text-dim); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Perfil de la Audiencia</h1>
+    <p class="subtitle">Análisis Demográfico: Edad y Sexo | whoisolivasx</p>
+
+    <div class="controls">
+        <div class="upload-section" id="dropZone">
+            <span>📁 Cargar Reporte de Audiencia (.xlsx)</span>
+            <input type="file" id="fileInput" accept=".xlsx" style="display: none;">
+        </div>
+        <button class="copy-btn" id="copyAiBtn" style="display:none;" onclick="copyForAI()">🚀 COPIAR PARA IA</button>
+    </div>
+
+    <div class="chart-container" id="chartWrapper" style="display:none;">
+        <canvas id="audienceChart"></canvas>
+    </div>
+
+    <div id="tableArea" class="table-wrapper">
+        <div style="text-align:center; padding:100px; color:var(--text-dim);">Sube los datos para analizar la composición de tu audiencia.</div>
+    </div>
+</div>
+
+<script src="menufijo.js"></script>
+
+<script>
+    const fileInput = document.getElementById('fileInput');
+    const dropZone = document.getElementById('dropZone');
+    let workbookData = [];
+    let myChart = null;
+
+    dropZone.onclick = () => fileInput.click();
+
+    dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = '#ff0000';
+        dropZone.style.background = '#3a1a1a';
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.background = 'var(--card-bg)';
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.style.borderColor = 'var(--border)';
+        dropZone.style.background = 'var(--card-bg)';
+        
+        const file = e.dataTransfer.files[0];
+        if (file && file.name.endsWith('.xlsx')) {
+            processExcel(file);
+        } else {
+            alert('Por favor, arrastra un archivo .xlsx válido.');
+        }
+    });
+
+    function processExcel(file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            workbookData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            
+            // Limpieza de datos: Renombrar "Especificado por el usuario"
+            workbookData = workbookData.map(row => {
+                if (row[1] === "Especificado por el usuario") row[1] = "No especificado";
+                return row;
+            });
+
+            renderTable(workbookData);
+            renderChart(workbookData);
+            document.getElementById('copyAiBtn').style.display = 'block';
+            document.getElementById('chartWrapper').style.display = 'block';
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    function renderTable(data) {
+        if (!data || data.length === 0) return;
+        let html = '<table><thead><tr>';
+        data[0].forEach(h => html += `<th>${h}</th>`);
+        html += '</tr></thead><tbody>';
+        data.slice(1).forEach(row => {
+            html += '<tr>';
+            row.forEach((cell, index) => {
+                let style = "";
+                if (index === 1) {
+                    if (cell === 'Hombre') style = "color: var(--male-color); font-weight: bold;";
+                    else if (cell === 'Mujer') style = "color: var(--female-color); font-weight: bold;";
+                    else if (cell === 'No especificado') style = "color: var(--other-color); font-style: italic;";
+                }
+                html += `<td style="${style}">${cell ?? ''}</td>`;
+            });
+            html += '</tr>';
+        });
+        document.getElementById('tableArea').innerHTML = html + '</tbody></table>';
+    }
+
+    function renderChart(data) {
+        const ctx = document.getElementById('audienceChart').getContext('2d');
+        if (myChart) myChart.destroy();
+
+        const ages = [...new Set(data.slice(1).map(r => r[0]))];
+
+        const maleData = ages.map(age => {
+            const row = data.find(r => r[0] === age && r[1] === 'Hombre');
+            return row ? parseFloat(row[2]) : 0;
+        });
+
+        const femaleData = ages.map(age => {
+            const row = data.find(r => r[0] === age && r[1] === 'Mujer');
+            return row ? parseFloat(row[2]) : 0;
+        });
+
+        const otherData = ages.map(age => {
+            const row = data.find(r => r[0] === age && r[1] === "No especificado");
+            return row ? parseFloat(row[2]) : 0;
+        });
+
+        myChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: ages,
+                datasets: [
+                    { label: 'Hombres (%)', data: maleData, backgroundColor: '#87CEEB', borderRadius: 5 },
+                    { label: 'Mujeres (%)', data: femaleData, backgroundColor: '#FFB6C1', borderRadius: 5 },
+                    { label: 'No especificado (%)', data: otherData, backgroundColor: '#555555', borderRadius: 5 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { 
+                    legend: { labels: { color: '#fff', font: { size: 14 } } },
+                    tooltip: { callbacks: { label: (ctx) => ` ${ctx.dataset.label}: ${ctx.raw}%` } }
+                },
+                scales: {
+                    x: { ticks: { color: '#aaa' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    y: { ticks: { color: '#aaa', callback: (v) => v + '%' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+                }
+            }
+        });
+    }
+
+    function copyForAI() {
+        if (!workbookData || workbookData.length === 0) {
+            alert("Por favor, sube un archivo primero.");
+            return;
+        }
+
+        let promptText = `Actúa como un Estratega Experto en Audiencias de YouTube, Creador de Contenido y Negociador de Patrocinios.
+            Analiza detalladamente los siguientes datos demográficos (Edad y Sexo) de toda la audiencia de mi canal "whoisolivasx", el cual se enfoca en videoensayos y análisis profundos.
+
+            Los datos incluyen el porcentaje de "Visualizaciones" y el porcentaje de "Tiempo de visualización" aportado por cada segmento demográfico.
+
+            TU OBJETIVO Y ENTREGABLES:
+            1. Perfil del Espectador Ideal (Avatar): Identifica cuál es el bloque demográfico principal (Edad y Sexo dominante). Basado en la edad de esta generación, ¿qué tono narrativo, tipo de humor o referencias de la cultura pop/internet debería incluir en mis videoensayos para conectar más profundamente con ellos?
+            2. Análisis de Retención por Demografía (Vistas vs Tiempo): Compara la columna de "Visualizaciones (%)" con "Tiempo de visualización (%)". ¿Hay algún grupo que aunque traiga menos clics iniciales, sea mucho más leal y retenga más tiempo el video (su % de tiempo es mayor a su % de vistas)? ¿Cómo aprovecho a este grupo hiper-leal?
+            3. Oportunidades de Monetización y Marcas (Brand Deals): Las marcas pagan por demografías específicas. Con base en la edad y género de mi audiencia principal, dame una lista de 3 industrias o tipos de productos (sponsors) altamente rentables a los que debería contactar para ofrecer integraciones publicitarias.
+            4. Estrategia de Expansión: Observa el segundo grupo demográfico más grande. Dame 1 idea temática o de formato de videoensayo que pueda ayudar a hacer crecer ese público secundario sin alejar o aburrir a mi audiencia principal.
+
+            Responde de forma ejecutiva, sin rodeos, usando viñetas y dirigiéndote a mí como tu cliente principal.
+
+            AQUÍ ESTÁN LOS DATOS DEMOGRÁFICOS DE MI CANAL:
+            `;
+
+        // Generamos el texto con los datos de la tabla
+        let dataText = workbookData.map(row => row.join("\t")).join("\n");
+        let fullText = promptText + "\n" + dataText;
+
+        navigator.clipboard.writeText(fullText).then(() => {
+            alert("🚀 ¡PROMPT DEMOGRÁFICO COPIADO! Pégalo en Gemini para recibir tu estrategia de audiencia y patrocinios.");
+        });
+    }
+</script>
+
+</body>
+</html>
