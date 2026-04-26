@@ -16,7 +16,7 @@
             --accent-hover: #cc0000;
             --card-bg: #2a2a2a;
             --border: #3f3f3f;
-            --sidebar-space: 140px; /* Espacio reservado para el menú */
+            --sidebar-space: 140px;
         }
 
         * {
@@ -28,7 +28,6 @@
         body { 
             font-family: 'Inter', 'Segoe UI', sans-serif; 
             background: var(--bg-color); 
-            /* Evita que el cuerpo sea más ancho que la ventana */
             width: 100vw;
             min-height: 100vh;
             padding: 20px 20px 20px var(--sidebar-space); 
@@ -37,7 +36,6 @@
         }
 
         .container { 
-            /* El ancho máximo es el 100% menos un pequeño margen de seguridad */
             width: calc(100% - 10px);
             max-width: 1800px; 
             background: var(--container-bg); 
@@ -45,7 +43,6 @@
             border-radius: 20px; 
             box-shadow: 0 15px 35px rgba(0,0,0,0.5); 
             margin: 0 auto;
-            /* Evita que el contenido interno genere scroll */
             overflow: hidden; 
         }
 
@@ -391,7 +388,7 @@
         }
         
         navigator.clipboard.writeText(fullText).then(() => {
-            alert("🚀 ¡PROMPT DE RETENCIÓN COPIADO! Pégalo en Gemini para recibir tu consultoría de guion y edición.");
+            alert("¡PROMPT DE RETENCIÓN COPIADO! Pégalo en Gemini para recibir tu consultoría de guion y edición.");
         });
     }
 </script>
